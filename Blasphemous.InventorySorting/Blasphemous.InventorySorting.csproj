@@ -6,9 +6,11 @@
 
     <Title>Inventory Sorting</Title>
     <Product>Inventory Sorting</Product>
-    <Authors>Unknown</Authors>
-    <Company>Unknown</Company>
-    <Description>A mod for Blasphemous 1</Description>
+    <Authors>NewbieElton</Authors>
+    <Company>NewbieElton</Company>
+    <Description>
+		A mod for Blasphemous 1 that allows multiple sorting modes for inventory items
+	</Description>
     <Version>0.1.0</Version>
 
     <TargetName>InventorySorting</TargetName>
@@ -20,8 +22,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Blasphemous.Framework.UI" Version="0.1.2" />
     <PackageReference Include="Blasphemous.GameLibs" Version="4.0.67" />
-    <PackageReference Include="Blasphemous.ModdingAPI" Version="0.1.0" />
+    <PackageReference Include="Blasphemous.ModdingAPI" Version="2.4.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="HarmonyPatches\" />
   </ItemGroup>
 
   <Target Name="Development" AfterTargets="PostBuildEvent">
