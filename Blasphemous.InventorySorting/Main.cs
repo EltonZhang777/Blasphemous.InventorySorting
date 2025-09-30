@@ -1,4 +1,6 @@
-﻿using BepInEx;
+﻿//global using BlasLocManager = Framework.Managers.LocalizationManager;
+global using BlasCollectibleItem = Framework.Inventory.CollectibleItem;
+using BepInEx;
 using System;
 using System.Linq;
 
