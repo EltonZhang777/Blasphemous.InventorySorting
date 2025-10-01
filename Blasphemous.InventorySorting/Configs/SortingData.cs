@@ -19,6 +19,7 @@ public class SortingData
         { SortingMode.ByAcquisitionOrder, true },
         { SortingMode.ByName, true },
         { SortingMode.ById, true },
+        { SortingMode.Custom, true },
     };
 
     public enum SortingMode
