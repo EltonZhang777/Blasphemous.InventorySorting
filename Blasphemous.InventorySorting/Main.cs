@@ -1,8 +1,6 @@
 ﻿//global using BlasLocManager = Framework.Managers.LocalizationManager;
 global using BlasCollectibleItem = Framework.Inventory.CollectibleItem;
 using BepInEx;
-using System;
-using System.Linq;
 
 namespace Blasphemous.InventorySorting;
 
@@ -15,20 +13,5 @@ internal class Main : BaseUnityPlugin
     private void Start()
     {
         InventorySorting = new InventorySorting();
-    }
-
-    public static T GetNextEnumValue<T>(T currentValue, int stepLength = 1) where T : Enum
-    {
-        T[] values = Enum.GetValues(typeof(T)).Cast<T>().ToArray();
-        int currentIndex = Array.IndexOf(values, currentValue);
-
-        // Calculate the new index, handling out-of-bounds cases
-        int newIndex = (currentIndex + stepLength) % values.Length;
-        if (newIndex < 0)
-        {
-            newIndex += values.Length;
-        }
-
-        return values[newIndex];
     }
 }

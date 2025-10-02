@@ -22,6 +22,24 @@ public class SortingData
         { SortingMode.Custom, true },
     };
 
+    internal static readonly Dictionary<ItemType, string> itemTypeToLocKeyHeader = new()
+    {
+        { ItemType.Relic, "Relic"},
+        { ItemType.Bead, "RosaryBead"},
+        { ItemType.Quest, "QuestItem"},
+        { ItemType.Prayer, "Prayer"},
+        { ItemType.Collectible, "CollectibleItem"},
+        { ItemType.Sword, "Sword"},
+    };
+
+    internal static Dictionary<SortingMode, string> SortingModeToDisplayName => new()
+    {
+        {SortingMode.ByAcquisitionOrder, Main.InventorySorting.LocalizationHandler.Localize("SortingMode.ByAcquisitionOrder")},
+        {SortingMode.ByName, Main.InventorySorting.LocalizationHandler.Localize("SortingMode.ByName")},
+        {SortingMode.ById, Main.InventorySorting.LocalizationHandler.Localize("SortingMode.ById")},
+        {SortingMode.Custom, Main.InventorySorting.LocalizationHandler.Localize("SortingMode.Custom")},
+    };
+
     public enum SortingMode
     {
         ByAcquisitionOrder,
@@ -46,22 +64,4 @@ public class SortingData
         }
 
     }
-
-    internal static readonly Dictionary<SortingMode, string> sortingModeToDisplayName = new()
-    {
-        {SortingMode.ByAcquisitionOrder, "By Acquisition Time"},
-        {SortingMode.ByName, "By Name"},
-        {SortingMode.ById, "By ID"},
-        {SortingMode.Custom, "Custom"},
-    };
-
-    internal static readonly Dictionary<ItemType, string> itemTypeToLocKeyHeader = new()
-    {
-        { ItemType.Relic, "Relic"},
-        { ItemType.Bead, "RosaryBead"},
-        { ItemType.Quest, "QuestItem"},
-        { ItemType.Prayer, "Prayer"},
-        { ItemType.Collectible, "CollectibleItem"},
-        { ItemType.Sword, "Sword"},
-    };
 }

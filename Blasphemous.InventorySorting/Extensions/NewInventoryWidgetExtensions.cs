@@ -1,5 +1,4 @@
 ﻿using Gameplay.UI.Others.MenuLogic;
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -18,20 +17,5 @@ internal static class NewInventoryWidgetExtensions
     public static NewInventory_Layout Get_currentLayout(this NewInventoryWidget widget)
     {
         return TraverseUtils.GetValue<NewInventory_Layout>(widget, "currentLayout");
-    }
-
-    internal static void Move<T>(this List<T> list, int oldIndex, int newIndex)
-    {
-        if (oldIndex < 0 || oldIndex >= list.Count || newIndex < 0 || newIndex >= list.Count)
-            throw new ArgumentOutOfRangeException();
-
-        if (oldIndex == newIndex)
-            return;
-
-        var item = list[oldIndex];
-        list.RemoveAt(oldIndex);
-        //if (newIndex > oldIndex) 
-        //    newIndex--; 
-        list.Insert(newIndex, item);
     }
 }

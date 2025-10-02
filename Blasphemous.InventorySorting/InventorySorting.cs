@@ -15,8 +15,10 @@ public class InventorySorting : BlasMod, IPersistentMod
     internal SaveSlotConfig currentSaveConfig;
     internal MasterConfig masterConfig;
     internal EventsHandler eventsHandler = new();
-    internal Dictionary<string, KeyCode> keybidings;
+    internal Dictionary<string, KeyCode> keybindings;
     internal InventorySorterWidget inventorySorterWidget;
+
+    internal static Dictionary<string, string> replaceKeybindsToKeyNameInLocalization;
 
     internal NewInventoryWidget VanillaInventoryWidget => GameObject.Find("/Game UI/Content/UI_NEWINVENTORY")?.GetComponent<NewInventoryWidget>();
 
@@ -55,8 +57,17 @@ public class InventorySorting : BlasMod, IPersistentMod
             { InventorySorterWidget.keyBind_switchSortingMode, KeyCode.LeftBracket },
             { InventorySorterWidget.keyBind_functionToggle, KeyCode.RightBracket },
         });
-        keybidings = InputHandler.GetAllKeybindings();
+        keybindings = InputHandler.GetAllKeybindings();
+
+        // initialize localization
+        LocalizationHandler.RegisterDefaultLanguage("en");
+        replaceKeybindsToKeyNameInLocalization = new()
+        {
+            { "<KeyBind_Switch_Sorting_Mode>", Main.InventorySorting.keybindings[InventorySorterWidget.keyBind_switchSortingMode].ToString() },
+            { "<KeyBind_Function_Toggle>", Main.InventorySorting.keybindings[InventorySorterWidget.keyBind_functionToggle].ToString() },
+        };
     }
+
 
     protected override void OnAllInitialized()
     {

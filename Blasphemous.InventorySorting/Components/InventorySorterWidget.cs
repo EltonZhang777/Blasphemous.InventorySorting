@@ -24,6 +24,7 @@ internal class InventorySorterWidget
     private Text _infoText;
     private NewInventoryWidget.TabType _currentTabType = NewInventoryWidget.TabType.Abilities;
     private NewInventoryWidget.TabType _previousTabType = NewInventoryWidget.TabType.Abilities;
+    private NewInventoryWidget.MenuState _previousMenuState = NewInventoryWidget.MenuState.OFF;
     private bool _isCustomSortDragging = false;
     private int _slotOfDraggedItem;
     private int _currentSlot;
@@ -31,6 +32,7 @@ internal class InventorySorterWidget
     internal static readonly string keyBind_switchSortingMode = "Switch_Sorting_Mode";
     internal static readonly string keyBind_functionToggle = "Function_Toggle";
     internal static readonly string gameObjectName = "Inventory Sorter Widget";
+
 
     internal GameObject GameObject
     {
@@ -91,11 +93,18 @@ internal class InventorySorterWidget
         if (currentMenuState == NewInventoryWidget.MenuState.OFF || currentMenuState == NewInventoryWidget.MenuState.UnlockSkills)
             return;
 
+        if (_previousMenuState != currentMenuState && currentMenuState == NewInventoryWidget.MenuState.Normal)
+        {
+            // the inventory is just opened
+            UpdateText();
+        }
+
         // updates the text to the current tab type if tab type changes
         _previousTabType = _currentTabType;
         _currentTabType = TraverseUtils.GetValue<NewInventoryWidget.TabType>(Main.InventorySorting.VanillaInventoryWidget, "currentTabType");
         if (_previousTabType != _currentTabType)
         {
+            // the inventory is switched to a different tab, check if new inventory items are added to this tab
             ProcessNewInventoryObjects();
             UpdateText();
             if (_isCustomSortDragging)
@@ -109,7 +118,14 @@ internal class InventorySorterWidget
 
         if (Main.InventorySorting.InputHandler.GetKeyDown(keyBind_switchSortingMode))
         {
-            CurrentSortingMode = Main.GetNextEnumValue(CurrentSortingMode);
+            if (_isCustomSortDragging)
+            {
+                // sorting mode is changed while dragging, abort the dragging process
+                _isCustomSortDragging = false;
+                // save the updated custom order of current tab
+                UpdateCustomSortOrder(_currentTabType);
+            }
+            CurrentSortingMode = CurrentSortingMode.GetNextEnumValue();
             UpdateText();
             SortInventoryTab(_currentTabType, CurrentSortingMode, CurrentSortingData.isAscending[CurrentSortingMode]);
         }
@@ -237,7 +253,8 @@ internal class InventorySorterWidget
         int currentMaxAcquisitionOrder = modList.Count == 0
             ? 0
             : modList.Select(x => x.acquisitionOrder).Max();
-        foreach (string id in vanillaList.Select(x => x.id).Except(modList.Select(x => x.id)))
+        List<string> ids = vanillaList.Select(x => x.id).Except(modList.Select(x => x.id)).ToList();
+        foreach (string id in ids)
         {
             // newly-added items have the highest acquisition order (current largest order + 1)
             // and a custom order the same of acquisition order
@@ -253,7 +270,8 @@ internal class InventorySorterWidget
 
         // for any items in modList that are not in vanillaList,
         // these are removed items, remove them from modList
-        foreach (string id in modList.Select(x => x.id).Except(vanillaList.Select(x => x.id)))
+        ids = modList.Select(x => x.id).Except(vanillaList.Select(x => x.id)).ToList();
+        foreach (string id in ids)
         {
             hasAnyDifference = true;
             modList.RemoveAll(x => x.id == id);
@@ -264,7 +282,6 @@ internal class InventorySorterWidget
 
     internal void ProcessNewInventoryObjects()
     {
-        // the inventory is switched to a different tab, check if new inventory items are added to this tab
         bool hasAnyChangedItem = false;
         switch (_currentTabType)
         {
@@ -526,7 +543,7 @@ internal class InventorySorterWidget
         if (parent == null)
             return null;
 
-        Vector2 rectSize = new Vector2(90, 500);
+        Vector2 rectSize = new Vector2(85, 500);
 
         _infoText = UIModder.Create(new RectCreationOptions()
         {
@@ -568,27 +585,39 @@ internal class InventorySorterWidget
             return;
         }
 
+        // switch to Arial font for Chinese as a temporary solution to missing characters in Blasphemous font
+        if (Core.Localization.GetCurrentLanguageCode().Equals("zh"))
+        {
+            InfoText.SetFont(UIModder.Fonts.Arial);
+        }
+        else
+        {
+            InfoText.SetFont(UIModder.Fonts.Blasphemous);
+        }
+
         StringBuilder sb = new();
-        sb.AppendLine($"Sorting Mode: ");
-        sb.AppendLine($"  {SortingData.sortingModeToDisplayName[CurrentSortingMode]}");
+        sb.AppendLine($"{Main.InventorySorting.LocalizationHandler.Localize("InventorySorterWidget.SortingMode.Header")}");
+        sb.AppendLine($"  {SortingData.SortingModeToDisplayName[CurrentSortingMode]}");
         if (CurrentSortingMode != SortingData.SortingMode.Custom)
         {
-            sb.AppendLine($"Order: ");
-            sb.AppendLine($"  {(Main.InventorySorting.currentSaveConfig.itemTypeToSortingData[_currentTabType].isAscending[CurrentSortingMode] ? "Ascending" : "Descending")}");
-            sb.AppendLine($"Press {Main.InventorySorting.keybidings[keyBind_functionToggle]} to reverse sorting order");
+            sb.AppendLine($"{Main.InventorySorting.LocalizationHandler.Localize("InventorySorterWidget.Order.Header")}");
+            sb.AppendLine($"  " + (Main.InventorySorting.currentSaveConfig.itemTypeToSortingData[_currentTabType].isAscending[CurrentSortingMode]
+                ? Main.InventorySorting.LocalizationHandler.Localize("InventorySorterWidget.Order.Ascending")
+                : Main.InventorySorting.LocalizationHandler.Localize("InventorySorterWidget.Order.Descending")));
+            sb.AppendLine($"{Main.InventorySorting.LocalizationHandler.Localize("InventorySorterWidget.Order.ToggleAscending").ReplaceWords(InventorySorting.replaceKeybindsToKeyNameInLocalization)}");
         }
         else
         {
             if (_isCustomSortDragging)
             {
-                sb.AppendLine($"Press {Main.InventorySorting.keybidings[keyBind_functionToggle]} to release the current item");
+                sb.AppendLine($"{Main.InventorySorting.LocalizationHandler.Localize("InventorySorterWidget.CustomSort.ToggleDrag.On").ReplaceWords(InventorySorting.replaceKeybindsToKeyNameInLocalization)}");
             }
             else
             {
-                sb.AppendLine($"Press {Main.InventorySorting.keybidings[keyBind_functionToggle]} to drag the current item");
+                sb.AppendLine($"{Main.InventorySorting.LocalizationHandler.Localize("InventorySorterWidget.CustomSort.ToggleDrag.Off").ReplaceWords(InventorySorting.replaceKeybindsToKeyNameInLocalization)}");
             }
         }
-        sb.AppendLine($"Press {Main.InventorySorting.keybidings[keyBind_switchSortingMode]} to switch sorting mode");
+        sb.AppendLine($"{Main.InventorySorting.LocalizationHandler.Localize("InventorySorterWidget.SwitchSortingMode").ReplaceWords(InventorySorting.replaceKeybindsToKeyNameInLocalization)}");
 
         InfoText.text = sb.ToString();
     }
