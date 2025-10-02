@@ -9,15 +9,15 @@
     <Authors>NewbieElton</Authors>
     <Company>NewbieElton</Company>
     <Description>
-		A mod for Blasphemous 1 that allows multiple sorting modes for inventory items
+		A mod for Blasphemous 1 that allows sorting inventory items by multiple ways, including custom sorting.
 	</Description>
-    <Version>0.1.0</Version>
+    <Version>1.0.0</Version>
 
     <TargetName>InventorySorting</TargetName>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
     <DocumentationFile>bin\$(Configuration)\$(TargetName).xml</DocumentationFile>
-    <RepositoryUrl>https://github.com/Example</RepositoryUrl>
+    <RepositoryUrl>https://github.com/EltonZhang777/Blasphemous.InventorySorting</RepositoryUrl>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
 
@@ -25,10 +25,6 @@
     <PackageReference Include="Blasphemous.Framework.UI" Version="0.1.2" />
     <PackageReference Include="Blasphemous.GameLibs" Version="4.0.67" />
     <PackageReference Include="Blasphemous.ModdingAPI" Version="2.4.1" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="HarmonyPatches\" />
   </ItemGroup>
 
   <Target Name="Development" AfterTargets="PostBuildEvent">
