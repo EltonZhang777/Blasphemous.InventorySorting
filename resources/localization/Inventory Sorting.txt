@@ -1,0 +1,31 @@
+lang: en
+
+InventorySorterWidget.SortingMode.Header: Sorting Mode:
+InventorySorterWidget.Order.Header: Order:
+InventorySorterWidget.Order.Ascending: Ascending
+InventorySorterWidget.Order.Descending: Descending
+InventorySorterWidget.Order.ToggleAscending: Press <KeyBind_Function_Toggle> to reverse sorting order
+InventorySorterWidget.CustomSort.ToggleDrag.On: Press <KeyBind_Function_Toggle> to release the current item
+InventorySorterWidget.CustomSort.ToggleDrag.Off: Press <KeyBind_Function_Toggle> to drag the current item
+InventorySorterWidget.SwitchSortingMode: Press <KeyBind_Switch_Sorting_Mode> to switch sorting mode
+
+SortingMode.ByAcquisitionOrder: By Acquisition Time
+SortingMode.ByName: By Name
+SortingMode.ById: By ID
+SortingMode.Custom: Custom
+
+lang: zh
+
+InventorySorterWidget.SortingMode.Header: 排序方式:
+InventorySorterWidget.Order.Header: 当前顺序:
+InventorySorterWidget.Order.Ascending: 升序
+InventorySorterWidget.Order.Descending: 降序
+InventorySorterWidget.Order.ToggleAscending: 按 <KeyBind_Function_Toggle> 键反转升/降序
+InventorySorterWidget.CustomSort.ToggleDrag.On: 按 <KeyBind_Function_Toggle> 键取消拖动
+InventorySorterWidget.CustomSort.ToggleDrag.Off: 按 <KeyBind_Function_Toggle> 键拖动当前选中的物品
+InventorySorterWidget.SwitchSortingMode: 按 <KeyBind_Switch_Sorting_Mode> 键切换排序方式
+
+SortingMode.ByAcquisitionOrder: 按获取时间
+SortingMode.ByName: 按名称
+SortingMode.ById: 按ID
+SortingMode.Custom: 自定义

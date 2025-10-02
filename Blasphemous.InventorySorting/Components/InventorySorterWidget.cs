@@ -24,11 +24,15 @@ internal class InventorySorterWidget
     private Text _infoText;
     private NewInventoryWidget.TabType _currentTabType = NewInventoryWidget.TabType.Abilities;
     private NewInventoryWidget.TabType _previousTabType = NewInventoryWidget.TabType.Abilities;
+    private NewInventoryWidget.MenuState _previousMenuState = NewInventoryWidget.MenuState.OFF;
     private bool _isCustomSortDragging = false;
+    private int _slotOfDraggedItem;
+    private int _currentSlot;
 
     internal static readonly string keyBind_switchSortingMode = "Switch_Sorting_Mode";
     internal static readonly string keyBind_functionToggle = "Function_Toggle";
     internal static readonly string gameObjectName = "Inventory Sorter Widget";
+
 
     internal GameObject GameObject
     {
@@ -89,53 +93,39 @@ internal class InventorySorterWidget
         if (currentMenuState == NewInventoryWidget.MenuState.OFF || currentMenuState == NewInventoryWidget.MenuState.UnlockSkills)
             return;
 
+        if (_previousMenuState != currentMenuState && currentMenuState == NewInventoryWidget.MenuState.Normal)
+        {
+            // the inventory is just opened
+            UpdateText();
+        }
+
         // updates the text to the current tab type if tab type changes
         _previousTabType = _currentTabType;
         _currentTabType = TraverseUtils.GetValue<NewInventoryWidget.TabType>(Main.InventorySorting.VanillaInventoryWidget, "currentTabType");
         if (_previousTabType != _currentTabType)
         {
             // the inventory is switched to a different tab, check if new inventory items are added to this tab
-            bool hasAnyChangedItem = false;
-            switch (_currentTabType)
-            {
-                case NewInventoryWidget.TabType.Abilities:
-                    break;
-                case NewInventoryWidget.TabType.Collectables:
-                    hasAnyChangedItem = ResolveNewInventoryObjects(Core.InventoryManager.GetCollectibleItemOwned().ToList(), ref CurrentSortingData.itemDatas);
-                    break;
-                case NewInventoryWidget.TabType.Prayers:
-                    hasAnyChangedItem = ResolveNewInventoryObjects(Core.InventoryManager.GetPrayersOwned().ToList(), ref CurrentSortingData.itemDatas);
-                    break;
-                case NewInventoryWidget.TabType.Quest:
-                    hasAnyChangedItem = ResolveNewInventoryObjects(Core.InventoryManager.GetQuestItemOwned().ToList(), ref CurrentSortingData.itemDatas);
-                    break;
-                case NewInventoryWidget.TabType.Reliquary:
-                    hasAnyChangedItem = ResolveNewInventoryObjects(Core.InventoryManager.GetRelicsOwned().ToList(), ref CurrentSortingData.itemDatas);
-                    break;
-                case NewInventoryWidget.TabType.Rosary:
-                    hasAnyChangedItem = ResolveNewInventoryObjects(Core.InventoryManager.GetRosaryBeadOwned().ToList(), ref CurrentSortingData.itemDatas);
-                    break;
-                case NewInventoryWidget.TabType.Sword:
-                    hasAnyChangedItem = ResolveNewInventoryObjects(Core.InventoryManager.GetSwordsOwned().ToList(), ref CurrentSortingData.itemDatas);
-                    break;
-            }
-            if (hasAnyChangedItem)
-            {
-                // re-sort the item order if there's any changes to items
-                SortInventoryTab(_currentTabType, CurrentSortingMode, CurrentSortingData.isAscending[CurrentSortingMode]);
-            }
-
+            ProcessNewInventoryObjects();
             UpdateText();
             if (_isCustomSortDragging)
             {
                 // tab is changed while dragging, abort the dragging process
                 _isCustomSortDragging = false;
+                // save the updated custom order of previous tab
+                UpdateCustomSortOrder(_previousTabType);
             }
         }
 
         if (Main.InventorySorting.InputHandler.GetKeyDown(keyBind_switchSortingMode))
         {
-            CurrentSortingMode = Main.GetNextEnumValue(CurrentSortingMode);
+            if (_isCustomSortDragging)
+            {
+                // sorting mode is changed while dragging, abort the dragging process
+                _isCustomSortDragging = false;
+                // save the updated custom order of current tab
+                UpdateCustomSortOrder(_currentTabType);
+            }
+            CurrentSortingMode = CurrentSortingMode.GetNextEnumValue();
             UpdateText();
             SortInventoryTab(_currentTabType, CurrentSortingMode, CurrentSortingData.isAscending[CurrentSortingMode]);
         }
@@ -151,9 +141,104 @@ internal class InventorySorterWidget
             else
             {
                 _isCustomSortDragging = !_isCustomSortDragging;
+                if (_isCustomSortDragging)
+                {
+                    // initialize index and sort order for custom dragging 
+                    _slotOfDraggedItem = Main.InventorySorting.VanillaInventoryWidget.Get_currentLayout().GetLastSlotSelected();
+                }
+                else
+                {
+                    // save the updated custom order of current tab
+                    UpdateCustomSortOrder(_currentTabType);
+                }
             }
             UpdateText();
         }
+
+        if (_isCustomSortDragging)
+        {
+            do
+            {
+                _currentSlot = Main.InventorySorting.VanillaInventoryWidget.Get_currentLayout().GetLastSlotSelected();
+                if (_currentSlot == _slotOfDraggedItem)
+                    break;
+
+                List<NewInventory_GridItem> cachedGridElements = TraverseUtils.GetValue<List<NewInventory_GridItem>>(Main.InventorySorting.VanillaInventoryWidget.Get_currentLayout(), "cachedGridElements");
+                if (_currentSlot != Mathf.Clamp(_currentSlot, 0, cachedGridElements.Count))
+                {
+                    // _currentSlot is out of bounds, abort custom dragging
+                    _isCustomSortDragging = false;
+                    break;
+                }
+                if (cachedGridElements[_currentSlot].inventoryObject == null)
+                {
+                    // _currentSlot has no item, abort custom dragging
+                    _isCustomSortDragging = false;
+                    break;
+                }
+
+                ProcessDragging();
+            } while (false);
+        }
+    }
+
+    internal void ProcessDragging()
+    {
+        Traverse traverse;
+        switch (_currentTabType)
+        {
+            case NewInventoryWidget.TabType.Collectables:
+                traverse = Traverse.Create(Core.InventoryManager);
+                List<BlasCollectibleItem> collectibleItems = TraverseUtils.GetValue<List<BlasCollectibleItem>>(traverse, "ownCollectibleItems");
+                collectibleItems.Move(_slotOfDraggedItem, _currentSlot);
+                _slotOfDraggedItem = _currentSlot;
+                traverse = Traverse.Create(Core.InventoryManager);
+                TraverseUtils.SetValue(ref traverse, "ownCollectibleItems", collectibleItems);
+                break;
+            case NewInventoryWidget.TabType.Prayers:
+                traverse = Traverse.Create(Core.InventoryManager);
+                List<Prayer> prayers = TraverseUtils.GetValue<List<Prayer>>(traverse, "ownPrayers");
+                prayers.Move(_slotOfDraggedItem, _currentSlot);
+                _slotOfDraggedItem = _currentSlot;
+                traverse = Traverse.Create(Core.InventoryManager);
+                TraverseUtils.SetValue(ref traverse, "ownPrayers", prayers);
+                break;
+            case NewInventoryWidget.TabType.Quest:
+                traverse = Traverse.Create(Core.InventoryManager);
+                List<QuestItem> questItems = TraverseUtils.GetValue<List<QuestItem>>(traverse, "ownQuestItems");
+                questItems.Move(_slotOfDraggedItem, _currentSlot);
+                _slotOfDraggedItem = _currentSlot;
+                traverse = Traverse.Create(Core.InventoryManager);
+                TraverseUtils.SetValue(ref traverse, "ownQuestItems", questItems);
+                break;
+            case NewInventoryWidget.TabType.Reliquary:
+                traverse = Traverse.Create(Core.InventoryManager);
+                List<Relic> relics = TraverseUtils.GetValue<List<Relic>>(traverse, "ownRellics");
+                relics.Move(_slotOfDraggedItem, _currentSlot);
+                _slotOfDraggedItem = _currentSlot;
+                traverse = Traverse.Create(Core.InventoryManager);
+                TraverseUtils.SetValue(ref traverse, "ownRellics", relics);
+                break;
+            case NewInventoryWidget.TabType.Rosary:
+                traverse = Traverse.Create(Core.InventoryManager);
+                List<RosaryBead> rosaryBeads = TraverseUtils.GetValue<List<RosaryBead>>(traverse, "ownBeads");
+                rosaryBeads.Move(_slotOfDraggedItem, _currentSlot);
+                _slotOfDraggedItem = _currentSlot;
+                traverse = Traverse.Create(Core.InventoryManager);
+                TraverseUtils.SetValue(ref traverse, "ownBeads", rosaryBeads);
+                break;
+            case NewInventoryWidget.TabType.Sword:
+                traverse = Traverse.Create(Core.InventoryManager);
+                List<Sword> swordHearts = TraverseUtils.GetValue<List<Sword>>(traverse, "ownSwords");
+                swordHearts.Move(_slotOfDraggedItem, _currentSlot);
+                _slotOfDraggedItem = _currentSlot;
+                traverse = Traverse.Create(Core.InventoryManager);
+                TraverseUtils.SetValue(ref traverse, "ownSwords", swordHearts);
+                break;
+        }
+
+        // refresh the widget to update the change
+        RefreshNewInventoryWidget();
     }
 
     /// <summary>
@@ -168,7 +253,8 @@ internal class InventorySorterWidget
         int currentMaxAcquisitionOrder = modList.Count == 0
             ? 0
             : modList.Select(x => x.acquisitionOrder).Max();
-        foreach (string id in vanillaList.Select(x => x.id).Except(modList.Select(x => x.id)))
+        List<string> ids = vanillaList.Select(x => x.id).Except(modList.Select(x => x.id)).ToList();
+        foreach (string id in ids)
         {
             // newly-added items have the highest acquisition order (current largest order + 1)
             // and a custom order the same of acquisition order
@@ -184,13 +270,48 @@ internal class InventorySorterWidget
 
         // for any items in modList that are not in vanillaList,
         // these are removed items, remove them from modList
-        foreach (string id in modList.Select(x => x.id).Except(vanillaList.Select(x => x.id)))
+        ids = modList.Select(x => x.id).Except(vanillaList.Select(x => x.id)).ToList();
+        foreach (string id in ids)
         {
             hasAnyDifference = true;
             modList.RemoveAll(x => x.id == id);
         }
 
         return hasAnyDifference;
+    }
+
+    internal void ProcessNewInventoryObjects()
+    {
+        bool hasAnyChangedItem = false;
+        switch (_currentTabType)
+        {
+            case NewInventoryWidget.TabType.Abilities:
+                break;
+            case NewInventoryWidget.TabType.Collectables:
+                hasAnyChangedItem = ResolveNewInventoryObjects(Core.InventoryManager.GetCollectibleItemOwned().ToList(), ref CurrentSortingData.itemDatas);
+                break;
+            case NewInventoryWidget.TabType.Prayers:
+                hasAnyChangedItem = ResolveNewInventoryObjects(Core.InventoryManager.GetPrayersOwned().ToList(), ref CurrentSortingData.itemDatas);
+                break;
+            case NewInventoryWidget.TabType.Quest:
+                hasAnyChangedItem = ResolveNewInventoryObjects(Core.InventoryManager.GetQuestItemOwned().ToList(), ref CurrentSortingData.itemDatas);
+                break;
+            case NewInventoryWidget.TabType.Reliquary:
+                hasAnyChangedItem = ResolveNewInventoryObjects(Core.InventoryManager.GetRelicsOwned().ToList(), ref CurrentSortingData.itemDatas);
+                break;
+            case NewInventoryWidget.TabType.Rosary:
+                hasAnyChangedItem = ResolveNewInventoryObjects(Core.InventoryManager.GetRosaryBeadOwned().ToList(), ref CurrentSortingData.itemDatas);
+                break;
+            case NewInventoryWidget.TabType.Sword:
+                hasAnyChangedItem = ResolveNewInventoryObjects(Core.InventoryManager.GetSwordsOwned().ToList(), ref CurrentSortingData.itemDatas);
+                break;
+        }
+
+        if (hasAnyChangedItem)
+        {
+            // re-sort the item order if there's any changes to items
+            SortInventoryTab(_currentTabType, CurrentSortingMode, CurrentSortingData.isAscending[CurrentSortingMode]);
+        }
     }
 
     internal void SortInventoryTab(NewInventoryWidget.TabType tabType, SortingMode sortingMode, bool ascending = true)
@@ -326,13 +447,103 @@ internal class InventorySorterWidget
         return comparerFunction;
     }
 
+    /// <summary>
+    /// Write the updated custom order of specified tab to SortingData
+    /// </summary>
+    internal void UpdateCustomSortOrder(NewInventoryWidget.TabType tabType)
+    {
+        Traverse traverse;
+        switch (tabType)
+        {
+            case NewInventoryWidget.TabType.Collectables:
+                traverse = Traverse.Create(Core.InventoryManager);
+                List<BlasCollectibleItem> collectibleItems = TraverseUtils.GetValue<List<BlasCollectibleItem>>(traverse, "ownCollectibleItems");
+                for (int i = 0; i < collectibleItems.Count; i++)
+                {
+                    string id = collectibleItems[i].id;
+                    int index = CurrentSortingData.itemDatas.FindIndex(x => x.id == id);
+                    if (index != -1)
+                    {
+                        CurrentSortingData.itemDatas[index].customOrder = i;
+                    }
+                }
+                break;
+            case NewInventoryWidget.TabType.Prayers:
+                traverse = Traverse.Create(Core.InventoryManager);
+                List<Prayer> prayers = TraverseUtils.GetValue<List<Prayer>>(traverse, "ownPrayers");
+                for (int i = 0; i < prayers.Count; i++)
+                {
+                    string id = prayers[i].id;
+                    int index = CurrentSortingData.itemDatas.FindIndex(x => x.id == id);
+                    if (index != -1)
+                    {
+                        CurrentSortingData.itemDatas[index].customOrder = i;
+                    }
+                }
+                break;
+            case NewInventoryWidget.TabType.Quest:
+                traverse = Traverse.Create(Core.InventoryManager);
+                List<QuestItem> questItems = TraverseUtils.GetValue<List<QuestItem>>(traverse, "ownQuestItems");
+                for (int i = 0; i < questItems.Count; i++)
+                {
+                    string id = questItems[i].id;
+                    int index = CurrentSortingData.itemDatas.FindIndex(x => x.id == id);
+                    if (index != -1)
+                    {
+                        CurrentSortingData.itemDatas[index].customOrder = i;
+                    }
+                }
+                break;
+            case NewInventoryWidget.TabType.Reliquary:
+                traverse = Traverse.Create(Core.InventoryManager);
+                List<Relic> relics = TraverseUtils.GetValue<List<Relic>>(traverse, "ownRellics");
+                for (int i = 0; i < relics.Count; i++)
+                {
+                    string id = relics[i].id;
+                    int index = CurrentSortingData.itemDatas.FindIndex(x => x.id == id);
+                    if (index != -1)
+                    {
+                        CurrentSortingData.itemDatas[index].customOrder = i;
+                    }
+                }
+                break;
+            case NewInventoryWidget.TabType.Rosary:
+                traverse = Traverse.Create(Core.InventoryManager);
+                List<RosaryBead> rosaryBeads = TraverseUtils.GetValue<List<RosaryBead>>(traverse, "ownBeads");
+                for (int i = 0; i < rosaryBeads.Count; i++)
+                {
+                    string id = rosaryBeads[i].id;
+                    int index = CurrentSortingData.itemDatas.FindIndex(x => x.id == id);
+                    if (index != -1)
+                    {
+                        CurrentSortingData.itemDatas[index].customOrder = i;
+                    }
+                }
+                break;
+            case NewInventoryWidget.TabType.Sword:
+                traverse = Traverse.Create(Core.InventoryManager);
+                List<Sword> swordHearts = TraverseUtils.GetValue<List<Sword>>(traverse, "ownSwords");
+                for (int i = 0; i < swordHearts.Count; i++)
+                {
+                    string id = swordHearts[i].id;
+                    int index = CurrentSortingData.itemDatas.FindIndex(x => x.id == id);
+                    if (index != -1)
+                    {
+                        CurrentSortingData.itemDatas[index].customOrder = i;
+                    }
+                }
+                break;
+        }
+
+    }
+
     private GameObject CreateGameObject()
     {
         Transform parent = Main.InventorySorting.VanillaInventoryWidget.transform.Find("External/Background");
         if (parent == null)
             return null;
 
-        Vector2 rectSize = new Vector2(90, 500);
+        Vector2 rectSize = new Vector2(85, 500);
 
         _infoText = UIModder.Create(new RectCreationOptions()
         {
@@ -374,27 +585,39 @@ internal class InventorySorterWidget
             return;
         }
 
+        // switch to Arial font for Chinese as a temporary solution to missing characters in Blasphemous font
+        if (Core.Localization.GetCurrentLanguageCode().Equals("zh"))
+        {
+            InfoText.SetFont(UIModder.Fonts.Arial);
+        }
+        else
+        {
+            InfoText.SetFont(UIModder.Fonts.Blasphemous);
+        }
+
         StringBuilder sb = new();
-        sb.AppendLine($"Sorting Mode: ");
-        sb.AppendLine($"  {SortingData.sortingModeToDisplayName[CurrentSortingMode]}");
+        sb.AppendLine($"{Main.InventorySorting.LocalizationHandler.Localize("InventorySorterWidget.SortingMode.Header")}");
+        sb.AppendLine($"  {SortingData.SortingModeToDisplayName[CurrentSortingMode]}");
         if (CurrentSortingMode != SortingData.SortingMode.Custom)
         {
-            sb.AppendLine($"Order: ");
-            sb.AppendLine($"  {(Main.InventorySorting.currentSaveConfig.itemTypeToSortingData[_currentTabType].isAscending[CurrentSortingMode] ? "Ascending" : "Descending")}");
-            sb.AppendLine($"Press {Main.InventorySorting.keybidings[keyBind_functionToggle]} to reverse sorting order");
+            sb.AppendLine($"{Main.InventorySorting.LocalizationHandler.Localize("InventorySorterWidget.Order.Header")}");
+            sb.AppendLine($"  " + (Main.InventorySorting.currentSaveConfig.itemTypeToSortingData[_currentTabType].isAscending[CurrentSortingMode]
+                ? Main.InventorySorting.LocalizationHandler.Localize("InventorySorterWidget.Order.Ascending")
+                : Main.InventorySorting.LocalizationHandler.Localize("InventorySorterWidget.Order.Descending")));
+            sb.AppendLine($"{Main.InventorySorting.LocalizationHandler.Localize("InventorySorterWidget.Order.ToggleAscending").ReplaceWords(InventorySorting.replaceKeybindsToKeyNameInLocalization)}");
         }
         else
         {
             if (_isCustomSortDragging)
             {
-                sb.AppendLine($"Press {Main.InventorySorting.keybidings[keyBind_functionToggle]} to release the current item");
+                sb.AppendLine($"{Main.InventorySorting.LocalizationHandler.Localize("InventorySorterWidget.CustomSort.ToggleDrag.On").ReplaceWords(InventorySorting.replaceKeybindsToKeyNameInLocalization)}");
             }
             else
             {
-                sb.AppendLine($"Press {Main.InventorySorting.keybidings[keyBind_functionToggle]} to drag the current item");
+                sb.AppendLine($"{Main.InventorySorting.LocalizationHandler.Localize("InventorySorterWidget.CustomSort.ToggleDrag.Off").ReplaceWords(InventorySorting.replaceKeybindsToKeyNameInLocalization)}");
             }
         }
-        sb.AppendLine($"Press {Main.InventorySorting.keybidings[keyBind_switchSortingMode]} to switch sorting mode");
+        sb.AppendLine($"{Main.InventorySorting.LocalizationHandler.Localize("InventorySorterWidget.SwitchSortingMode").ReplaceWords(InventorySorting.replaceKeybindsToKeyNameInLocalization)}");
 
         InfoText.text = sb.ToString();
     }
