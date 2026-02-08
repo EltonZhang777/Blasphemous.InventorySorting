@@ -10,7 +10,7 @@ using UnityEngine;
 
 namespace Blasphemous.InventorySorting;
 
-public class InventorySorting : BlasMod, IPersistentMod
+public class InventorySorting : BlasMod, ISlotPersistentMod<SaveSlotConfig>
 {
     internal SaveSlotConfig currentSaveConfig;
     internal MasterConfig masterConfig;
@@ -25,24 +25,6 @@ public class InventorySorting : BlasMod, IPersistentMod
     public string PersistentID => ModInfo.MOD_ID;
 
     internal InventorySorting() : base(ModInfo.MOD_ID, ModInfo.MOD_NAME, ModInfo.MOD_AUTHOR, ModInfo.MOD_VERSION) { }
-
-    /// <inheritdoc/>
-    public void LoadGame(SaveData data)
-    {
-        currentSaveConfig = data as SaveSlotConfig;
-    }
-
-    /// <inheritdoc/>
-    public SaveData SaveGame()
-    {
-        return currentSaveConfig;
-    }
-
-    /// <inheritdoc/>
-    public void ResetGame()
-    {
-        currentSaveConfig = new();
-    }
 
     /// <inheritdoc/>
     protected override void OnInitialize()
@@ -77,5 +59,20 @@ public class InventorySorting : BlasMod, IPersistentMod
     protected override void OnUpdate()
     {
         eventsHandler.Update();
+    }
+
+    public SaveSlotConfig SaveSlot()
+    {
+        return currentSaveConfig;
+    }
+
+    public void LoadSlot(SaveSlotConfig data)
+    {
+        currentSaveConfig = data as SaveSlotConfig;
+    }
+
+    public void ResetSlot()
+    {
+        currentSaveConfig = new();
     }
 }

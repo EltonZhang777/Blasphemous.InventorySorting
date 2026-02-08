@@ -33,7 +33,9 @@ internal class InventorySorterWidget
     internal static readonly string keyBind_functionToggle = "Function_Toggle";
     internal static readonly string gameObjectName = "Inventory Sorter Widget";
 
-
+    internal static float ScreenWidthScale => Screen.width / Core.Screen.GameCamera.pixelWidth;
+    internal static float ScreenHeightScale => Screen.height / Core.Screen.GameCamera.pixelHeight;
+    internal static float GuiScale => (ScreenHeightScale > ScreenWidthScale) ? ScreenWidthScale : ScreenHeightScale;
     internal GameObject GameObject
     {
         get
@@ -83,9 +85,10 @@ internal class InventorySorterWidget
 
     internal void OnUpdate()
     {
+        GameObject.SetActive(UIController.instance.IsShowingInventory);
         // the widget should only be updating when the inventory is open
         // short hand logic checks if game is paused. If not, inventory certainly isn't up
-        if (!UIController.instance.Paused)
+        if (!UIController.instance.IsShowingInventory)
             return;
 
         // actually checks if inventory is open and not in lore page or sword skill page
@@ -539,11 +542,12 @@ internal class InventorySorterWidget
 
     private GameObject CreateGameObject()
     {
-        Transform parent = Main.InventorySorting.VanillaInventoryWidget.transform.Find("External/Background");
+        //Transform parent = Main.InventorySorting.VanillaInventoryWidget.transform.Find("External/Background");
+        Transform parent = UIModder.Parents.CanvasHighRes;
         if (parent == null)
             return null;
 
-        Vector2 rectSize = new Vector2(85, 500);
+        Vector2 rectSize = new Vector2(240, 800);
 
         _infoText = UIModder.Create(new RectCreationOptions()
         {
@@ -557,7 +561,7 @@ internal class InventorySorterWidget
         }).AddText(new TextCreationOptions()
         {
             Alignment = TextAnchor.UpperLeft,
-            FontSize = 16,
+            FontSize = (int)(12 * GuiScale),
             Font = UIModder.Fonts.Blasphemous,
             WordWrap = true,
             Color = Color.white,

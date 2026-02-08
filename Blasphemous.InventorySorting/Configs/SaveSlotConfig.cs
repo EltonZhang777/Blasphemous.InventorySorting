@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace Blasphemous.InventorySorting.Configs;
 
-public class SaveSlotConfig : SaveData
+public class SaveSlotConfig : SlotSaveData
 {
     public Dictionary<NewInventoryWidget.TabType, SortingData> itemTypeToSortingData = new()
     {
@@ -15,6 +15,4 @@ public class SaveSlotConfig : SaveData
         { NewInventoryWidget.TabType.Prayers, new SortingData() },
         { NewInventoryWidget.TabType.Collectables, new SortingData() },
     };
-
-    public SaveSlotConfig() : base(ModInfo.MOD_ID) { }
 }
