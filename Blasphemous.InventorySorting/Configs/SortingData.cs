@@ -34,10 +34,10 @@ public class SortingData
 
     internal static Dictionary<SortingMode, string> SortingModeToDisplayName => new()
     {
-        {SortingMode.ByAcquisitionOrder, Main.InventorySorting.LocalizationHandler.Localize("SortingMode.ByAcquisitionOrder")},
-        {SortingMode.ByName, Main.InventorySorting.LocalizationHandler.Localize("SortingMode.ByName")},
-        {SortingMode.ById, Main.InventorySorting.LocalizationHandler.Localize("SortingMode.ById")},
-        {SortingMode.Custom, Main.InventorySorting.LocalizationHandler.Localize("SortingMode.Custom")},
+        {SortingMode.ByAcquisitionOrder, Main.Localize("SortingMode.ByAcquisitionOrder")},
+        {SortingMode.ByName, Main.Localize("SortingMode.ByName")},
+        {SortingMode.ById, Main.Localize("SortingMode.ById")},
+        {SortingMode.Custom, Main.Localize("SortingMode.Custom")},
     };
 
     public enum SortingMode

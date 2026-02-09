@@ -17,6 +17,11 @@ internal class Main : BaseUnityPlugin
         InventorySorting = new InventorySorting();
     }
 
+    internal static string Localize(string key)
+    {
+        return InventorySorting.LocalizationHandler.Localize(key);
+    }
+
     internal static void LogIfDebug(string message)
     {
 #if DEBUG

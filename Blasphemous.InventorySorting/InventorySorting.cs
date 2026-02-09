@@ -1,8 +1,10 @@
-﻿using Blasphemous.InventorySorting.Components;
+﻿using Blasphemous.Framework.UI;
+using Blasphemous.InventorySorting.Components;
 using Blasphemous.InventorySorting.Configs;
 using Blasphemous.InventorySorting.Events;
 using Blasphemous.InventorySorting.Extensions;
 using Blasphemous.ModdingAPI;
+using Blasphemous.ModdingAPI.Helpers;
 using Blasphemous.ModdingAPI.Persistence;
 using Gameplay.UI.Others.MenuLogic;
 using System.Collections.Generic;
@@ -53,7 +55,28 @@ public class InventorySorting : BlasMod, ISlotPersistentMod<SaveSlotConfig>
 
     protected override void OnAllInitialized()
     {
-        inventorySorterWidget = new();
+        eventsHandler.OnFirstEnterMainMenu += () =>
+        {
+            // initialize InventorySorterWidget
+            GameObject cameraObject = UIModder.Parents.CanvasHighRes.gameObject;
+            GameObject widgetParent = new("Inventory Sorter Widget");
+            widgetParent.transform.SetParent(cameraObject.transform, false);
+            inventorySorterWidget = widgetParent.AddComponent<InventorySorterWidget>();
+            ((RectTransform)(widgetParent.transform))
+                .SetXRange(Vector2.zero)
+                .SetYRange(Vector2.one)
+                .SetPivot(new Vector2(0, 1))
+                .SetPosition(new Vector2(30, -200))
+                .SetSize(new Vector2(240, 800));
+        };
+    }
+
+    protected override void OnLevelLoaded(string oldLevel, string newLevel)
+    {
+        if (SceneHelper.MenuSceneLoaded)
+        {
+            eventsHandler.FirstEnterMainMenu();
+        }
     }
 
     protected override void OnUpdate()
