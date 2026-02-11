@@ -1,7 +1,6 @@
 ﻿using Blasphemous.Framework.UI;
 using Blasphemous.InventorySorting.Configs;
 using Blasphemous.InventorySorting.Extensions;
-using Blasphemous.ModdingAPI;
 using Framework.Inventory;
 using Framework.Managers;
 using Gameplay.UI;
@@ -18,39 +17,27 @@ using static Blasphemous.InventorySorting.Configs.SortingData;
 
 namespace Blasphemous.InventorySorting.Components;
 
-internal class InventorySorterWidget
+[RequireComponent(typeof(Text))]
+internal class InventorySorterWidget : MonoBehaviour
 {
-    private GameObject _gameObject;
     private Text _infoText;
+    private RectTransform _rectTransform;
     private NewInventoryWidget.TabType _currentTabType = NewInventoryWidget.TabType.Abilities;
     private NewInventoryWidget.TabType _previousTabType = NewInventoryWidget.TabType.Abilities;
     private NewInventoryWidget.MenuState _previousMenuState = NewInventoryWidget.MenuState.OFF;
+    private string _previousLanguageCode;
     private bool _isCustomSortDragging = false;
     private int _slotOfDraggedItem;
     private int _currentSlot;
+    private int _fontSize = 12;
 
     internal static readonly string keyBind_switchSortingMode = "Switch_Sorting_Mode";
     internal static readonly string keyBind_functionToggle = "Function_Toggle";
-    internal static readonly string gameObjectName = "Inventory Sorter Widget";
 
+    internal static float ScreenWidthScale => Screen.width / Core.Screen.GameCamera.pixelWidth;
+    internal static float ScreenHeightScale => Screen.height / Core.Screen.GameCamera.pixelHeight;
+    internal static float GuiScale => (ScreenHeightScale > ScreenWidthScale) ? ScreenWidthScale : ScreenHeightScale;
 
-    internal GameObject GameObject
-    {
-        get
-        {
-            _gameObject ??= CreateGameObject();
-            return _gameObject;
-        }
-    }
-
-    internal Text InfoText
-    {
-        get
-        {
-            _infoText ??= GameObject.GetComponent<Text>();
-            return _infoText;
-        }
-    }
 
     internal SortingData CurrentSortingData
     {
@@ -76,27 +63,53 @@ internal class InventorySorterWidget
         }
     }
 
-    internal InventorySorterWidget()
+    private void Awake()
     {
-        Main.InventorySorting.eventsHandler.OnUpdate += OnUpdate;
+        _infoText = gameObject.GetComponent<Text>();
+        _rectTransform = gameObject.GetComponent<RectTransform>();
+        _fontSize = Main.InventorySorting.masterConfig.fontSize;
+
+        _infoText.SetAlignment(TextAnchor.UpperLeft)
+            .SetFont(UIModder.Fonts.Blasphemous)
+            .SetFontSize((int)(_fontSize * GuiScale))
+            .SetWrapping(true)
+            .SetColor(Color.white);
+
+        _rectTransform.SetXRange(Vector2.zero)
+            .SetYRange(Vector2.one)
+            .SetPivot(new Vector2(0, 1))
+            .SetPosition(Main.InventorySorting.masterConfig.widgetPosition)
+            .SetSize(Main.InventorySorting.masterConfig.widgetSize);
+
+        Main.InventorySorting.eventsHandler.OnInventoryToggle += OnInventoryToggle;
     }
 
-    internal void OnUpdate()
+    private void OnDestroy()
+    {
+        Main.InventorySorting.eventsHandler.OnInventoryToggle -= OnInventoryToggle;
+    }
+
+    private void Update()
     {
         // the widget should only be updating when the inventory is open
-        // short hand logic checks if game is paused. If not, inventory certainly isn't up
-        if (!UIController.instance.Paused)
+        if (!UIController.instance.IsShowingInventory)
             return;
 
-        // actually checks if inventory is open and not in lore page or sword skill page
+        // checks if inventory is open and not in lore page or sword skill page
         NewInventoryWidget.MenuState currentMenuState = TraverseUtils.GetValue<NewInventoryWidget.MenuState>(Main.InventorySorting.VanillaInventoryWidget, "currentMenuState");
-        if (currentMenuState == NewInventoryWidget.MenuState.OFF || currentMenuState == NewInventoryWidget.MenuState.UnlockSkills)
+        if ((currentMenuState == NewInventoryWidget.MenuState.OFF)
+            || (currentMenuState == NewInventoryWidget.MenuState.UnlockSkills))
             return;
 
-        if (_previousMenuState != currentMenuState && currentMenuState == NewInventoryWidget.MenuState.Normal)
+        // update text if inventory is just opened or if language is changed
+        string currentLanguageCode = Core.Localization.GetCurrentLanguageCode();
+        if (((_previousMenuState != currentMenuState)
+            && (currentMenuState == NewInventoryWidget.MenuState.Normal))
+            || _previousLanguageCode != currentLanguageCode)
         {
-            // the inventory is just opened
             UpdateText();
+            _previousMenuState = currentMenuState;
+            _previousLanguageCode = currentLanguageCode;
         }
 
         // updates the text to the current tab type if tab type changes
@@ -180,6 +193,11 @@ internal class InventorySorterWidget
                 ProcessDragging();
             } while (false);
         }
+    }
+
+    internal void OnInventoryToggle(bool active)
+    {
+        gameObject.SetActive(active);
     }
 
     internal void ProcessDragging()
@@ -316,9 +334,6 @@ internal class InventorySorterWidget
 
     internal void SortInventoryTab(NewInventoryWidget.TabType tabType, SortingMode sortingMode, bool ascending = true)
     {
-#if DEBUG
-        ModLog.Warn($"Starting to sort tab `{tabType}` by sorting mode `{sortingMode}`!");
-#endif
         Traverse traverse;
         switch (tabType)
         {
@@ -537,88 +552,57 @@ internal class InventorySorterWidget
 
     }
 
-    private GameObject CreateGameObject()
-    {
-        Transform parent = Main.InventorySorting.VanillaInventoryWidget.transform.Find("External/Background");
-        if (parent == null)
-            return null;
-
-        Vector2 rectSize = new Vector2(85, 500);
-
-        _infoText = UIModder.Create(new RectCreationOptions()
-        {
-            Name = gameObjectName,
-            Parent = parent,
-            XRange = Vector2.zero,
-            YRange = Vector2.one,
-            Pivot = new Vector2(0, 1),
-            Position = new Vector2(0, 0),
-            Size = rectSize,
-        }).AddText(new TextCreationOptions()
-        {
-            Alignment = TextAnchor.UpperLeft,
-            FontSize = 16,
-            Font = UIModder.Fonts.Blasphemous,
-            WordWrap = true,
-            Color = Color.white,
-        });
-
-        _infoText.transform.SetAsLastSibling();
-
-        RectTransform rt = _infoText.gameObject.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0, 1);
-        rt.anchorMax = new Vector2(0, 1);
-        rt.pivot = new Vector2(0, 1);
-        rt.anchoredPosition = new Vector2(0, -20);
-
-#if DEBUG
-        ModLog.Warn($"Created text GameObject at position {_infoText.transform.position} !");
-#endif
-        return _infoText.gameObject;
-    }
-
     private void UpdateText()
     {
         if (_currentTabType == NewInventoryWidget.TabType.Abilities)
         {
-            InfoText.text = "";
+            _infoText.text = "";
             return;
         }
+
+        // set font size
+        _infoText.SetFontSize((int)(_fontSize * GuiScale));
 
         // switch to Arial font for Chinese as a temporary solution to missing characters in Blasphemous font
         if (Core.Localization.GetCurrentLanguageCode().Equals("zh"))
         {
-            InfoText.SetFont(UIModder.Fonts.Arial);
+            _infoText.SetFont(UIModder.Fonts.Arial);
         }
         else
         {
-            InfoText.SetFont(UIModder.Fonts.Blasphemous);
+            _infoText.SetFont(UIModder.Fonts.Blasphemous);
         }
 
         StringBuilder sb = new();
-        sb.AppendLine($"{Main.InventorySorting.LocalizationHandler.Localize("InventorySorterWidget.SortingMode.Header")}");
+        sb.AppendLine($"{Main.Localize("InventorySorterWidget.SortingMode.Header")}");
         sb.AppendLine($"  {SortingData.SortingModeToDisplayName[CurrentSortingMode]}");
+        sb.AppendLine($"");
+
         if (CurrentSortingMode != SortingData.SortingMode.Custom)
         {
-            sb.AppendLine($"{Main.InventorySorting.LocalizationHandler.Localize("InventorySorterWidget.Order.Header")}");
+            sb.AppendLine($"{Main.Localize("InventorySorterWidget.Order.Header")}");
             sb.AppendLine($"  " + (Main.InventorySorting.currentSaveConfig.itemTypeToSortingData[_currentTabType].isAscending[CurrentSortingMode]
-                ? Main.InventorySorting.LocalizationHandler.Localize("InventorySorterWidget.Order.Ascending")
-                : Main.InventorySorting.LocalizationHandler.Localize("InventorySorterWidget.Order.Descending")));
-            sb.AppendLine($"{Main.InventorySorting.LocalizationHandler.Localize("InventorySorterWidget.Order.ToggleAscending").ReplaceWords(InventorySorting.replaceKeybindsToKeyNameInLocalization)}");
+                ? Main.Localize("InventorySorterWidget.Order.Ascending")
+                : Main.Localize("InventorySorterWidget.Order.Descending")));
+
+            sb.AppendLine($"");
+            sb.AppendLine($"{Main.Localize("InventorySorterWidget.Order.ToggleAscending").ReplaceWords(InventorySorting.replaceKeybindsToKeyNameInLocalization)}");
         }
         else
         {
             if (_isCustomSortDragging)
             {
-                sb.AppendLine($"{Main.InventorySorting.LocalizationHandler.Localize("InventorySorterWidget.CustomSort.ToggleDrag.On").ReplaceWords(InventorySorting.replaceKeybindsToKeyNameInLocalization)}");
+                sb.AppendLine($"{Main.Localize("InventorySorterWidget.CustomSort.ToggleDrag.On").ReplaceWords(InventorySorting.replaceKeybindsToKeyNameInLocalization)}");
             }
             else
             {
-                sb.AppendLine($"{Main.InventorySorting.LocalizationHandler.Localize("InventorySorterWidget.CustomSort.ToggleDrag.Off").ReplaceWords(InventorySorting.replaceKeybindsToKeyNameInLocalization)}");
+                sb.AppendLine($"{Main.Localize("InventorySorterWidget.CustomSort.ToggleDrag.Off").ReplaceWords(InventorySorting.replaceKeybindsToKeyNameInLocalization)}");
             }
         }
-        sb.AppendLine($"{Main.InventorySorting.LocalizationHandler.Localize("InventorySorterWidget.SwitchSortingMode").ReplaceWords(InventorySorting.replaceKeybindsToKeyNameInLocalization)}");
 
-        InfoText.text = sb.ToString();
+        sb.AppendLine($"");
+        sb.AppendLine($"{Main.Localize("InventorySorterWidget.SwitchSortingMode").ReplaceWords(InventorySorting.replaceKeybindsToKeyNameInLocalization)}");
+
+        _infoText.text = sb.ToString();
     }
 }
