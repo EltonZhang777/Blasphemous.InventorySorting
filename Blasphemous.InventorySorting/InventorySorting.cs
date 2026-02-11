@@ -62,12 +62,6 @@ public class InventorySorting : BlasMod, ISlotPersistentMod<SaveSlotConfig>
             GameObject widgetParent = new("Inventory Sorter Widget");
             widgetParent.transform.SetParent(cameraObject.transform, false);
             inventorySorterWidget = widgetParent.AddComponent<InventorySorterWidget>();
-            ((RectTransform)(widgetParent.transform))
-                .SetXRange(Vector2.zero)
-                .SetYRange(Vector2.one)
-                .SetPivot(new Vector2(0, 1))
-                .SetPosition(new Vector2(30, -200))
-                .SetSize(new Vector2(240, 800));
         };
     }
 

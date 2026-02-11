@@ -21,6 +21,7 @@ namespace Blasphemous.InventorySorting.Components;
 internal class InventorySorterWidget : MonoBehaviour
 {
     private Text _infoText;
+    private RectTransform _rectTransform;
     private NewInventoryWidget.TabType _currentTabType = NewInventoryWidget.TabType.Abilities;
     private NewInventoryWidget.TabType _previousTabType = NewInventoryWidget.TabType.Abilities;
     private NewInventoryWidget.MenuState _previousMenuState = NewInventoryWidget.MenuState.OFF;
@@ -65,11 +66,21 @@ internal class InventorySorterWidget : MonoBehaviour
     private void Awake()
     {
         _infoText = gameObject.GetComponent<Text>();
+        _rectTransform = gameObject.GetComponent<RectTransform>();
+        _fontSize = Main.InventorySorting.masterConfig.fontSize;
+
         _infoText.SetAlignment(TextAnchor.UpperLeft)
             .SetFont(UIModder.Fonts.Blasphemous)
             .SetFontSize((int)(_fontSize * GuiScale))
             .SetWrapping(true)
             .SetColor(Color.white);
+
+        _rectTransform.SetXRange(Vector2.zero)
+            .SetYRange(Vector2.one)
+            .SetPivot(new Vector2(0, 1))
+            .SetPosition(Main.InventorySorting.masterConfig.widgetPosition)
+            .SetSize(Main.InventorySorting.masterConfig.widgetSize);
+
         Main.InventorySorting.eventsHandler.OnInventoryToggle += OnInventoryToggle;
     }
 
